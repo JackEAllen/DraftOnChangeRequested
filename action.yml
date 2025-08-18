@@ -1,0 +1,11 @@
+name: 'Convert a PR to Draft PR on Change Request'
+description: 'Converts a pull request to a draft pull request when a reviewer requests changes'
+author: 'Jack Allen'
+inputs:
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
+
