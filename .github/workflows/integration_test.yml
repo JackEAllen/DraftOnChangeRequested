@@ -1,0 +1,21 @@
+name: Integration Test for Convert to Draft on Change Request
+
+on:
+    pull_request_review:
+        types: [submitted]
+
+jobs:
+    integration-test:
+        if: github.event.review.state == 'changes_requested'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: write
+            repository-projects: read
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Test action
+              uses: ./
+              with:
+                github-token: ${{ secrets.ACTIONS }}
