@@ -15,7 +15,6 @@ async function run() {
 
         const { review, pull_request: pullRequest } = context.payload;  // Destructure payload for clarity
 
-        // Check if the review state is 'changes_requested'
         if (review.state !== 'changes_requested') {
             return core.info(`Review state is "${review.state}", skipping conversion`);
         }
@@ -31,7 +30,7 @@ async function run() {
         }
 
         core.setSecret(token);
-        const octokit = github.getOctokit(token);  // Needed to interact with GitHub API
+        const octokit = github.getOctokit(token);
 
         // Retrieve PR details and try to convert to draft
         try { 
@@ -50,14 +49,51 @@ async function run() {
         }
 
     } catch (error) {
-        // Redact sensitive information from error messages safely so they don't leak tokens or secrets
         const safeError = error.message?.replace(/token|auth|secret/gi, '[REDACTED]');
         core.setFailed(`Action failed: ${safeError}`);
     }
 }
 
 async function convertToDraft(octokit, currentPR, prNumber) {
-    core.info(`Converting PR #${prNumber} to draft...`);
+    const mutation = `
+        mutation ConvertPullRequestToDraft($pullRequestId: ID!) {
+            convertPullRequestToDraft(input: {pullRequestId: $pullRequestId}) {
+                pullRequest {
+                    isDraft
+                    number
+                }
+            }
+        }`;
+
+        // Execute the GraphQL mutation to convert the PR to draft
+        try {
+            const response = await octokit.graphql(mutation, {
+                pullRequestId: currentPR.node_id  // node_id for the PR
+            });
+
+            response.convertPullRequestToDraft.pullRequest.isDraft
+                ? core.info(`Pull request #${prNumber} successfully converted to draft`)
+                : core.setFailed(`Failed to convert pull request #${prNumber} to draft`);
+        } catch (error) {
+            const errorMessages = {
+                'convertPullRequestToDraft\' doesn\'t seem to exist': 'The GraphQL mutation is not available - Possibly due to repository or token limitations',
+                ' PR was submitted from a fork': 'Converting from a fork is not supported'
+            };
+            // Check for known error messages and handle them accordingly
+            const knownError = Object.entries(errorMessages)
+                .find(([key]) => error.message?.includes(key))?.[1];
+
+            if (knownError) {
+                core.setFailed(`Conversion failed: ${knownError}`);
+            } else if (error.status === 403) {
+                core.setFailed('Insufficient permissions to convert PR to draft - Ensure the token has the correct scope and the repository allows this action');
+            } else if (error.status === 404) {
+                core.setFailed('Pull request not found - Check if the PR number is correct and the repository exists and is accessible');
+            } else {
+                const safeError = error.message?.replace(/token|auth|secret/gi, '[REDACTED]');
+                core.setFailed(`Conversion failed: ${safeError}`);
+            }
+        }
 }
 
 run();
