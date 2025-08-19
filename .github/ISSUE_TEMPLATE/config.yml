@@ -7,5 +7,5 @@ contact_links:
     url: https://github.com/JackEAllen/DraftOnChangeRequested/discussions/categories/ideas
     about: If you have ideas or suggestions, please first ask them here or contact the admin.
   - name: Security Bugs
-    url: https://github.com/JackEAllen/DraftOnChangeRequested/security
+    url: https://github.com/JackEAllen/DraftOnChangeRequested/security/policy
     about: We kindly ask that you report any security vulnerabilities to the repository admin to resolve.
